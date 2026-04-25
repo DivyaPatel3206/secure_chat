@@ -1,0 +1,41 @@
+services:
+  # ── Backend: FastAPI ─────────────────────────
+  - type: web
+    name: securechat-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: APP_URL
+        fromService:
+          name: securechat-backend
+          type: web
+          property: host
+    healthCheckPath: /api/rooms
+
+  # ── Frontend: React (Static Site) ───────────
+  - type: web
+    name: securechat-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: securechat-backend
+          type: web
+          property: host
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://securechat-backend.onrender.com/api/*
+      - type: rewrite
+        source: /ws/*
+        destination: wss://securechat-backend.onrender.com/ws/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
